@@ -78,7 +78,7 @@ class TestSuit(object):
             {% for validator in step.validators %}assert {{ validator }}
             {% endfor %}
         {% endfor %}
-    {% endfor%}
+    {% endfor %}
 ''')
 
 
