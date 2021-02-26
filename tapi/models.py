@@ -24,7 +24,7 @@ class TRequest(BaseModel):
     method: MethodEnum
     url: Text
     headers: Union[Text, Dict[Text, Text]] = {}
-    body: Union[Text, Dict[Text, Any]] = None
+    body: Union[Text, Dict[Text, Any], List] = None
     query: Union[Text, Dict[Text, Any]] = None
 
 
@@ -61,3 +61,14 @@ class TSuite(BaseModel):
     cases: List[TCase] = []
     parent_suite_name: Text
     hooks: List[THook] = []
+
+
+class TResponse(BaseModel):
+    status_code: int
+    headers: Union[Text, Dict[Text, Text]] = {}
+    body: Union[Text, Dict[Text, Any], List] = {}
+
+
+class TCall(BaseModel):
+    request: TRequest
+    response: TResponse

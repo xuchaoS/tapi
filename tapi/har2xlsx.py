@@ -17,49 +17,45 @@ from .parse import (COL_LEVEL,
                     COL_METHOD,
                     COL_POST_VARIABLE,
                     COL_QUERY,
-                    COL_PRE_VARIABLE)
+                    COL_PRE_VARIABLE, parse_har)
 
 
 def har2xlsx(filename):
-    with open(filename, "rb") as f:
-        data = json.load(f)
     records = []
-    for i, interface in enumerate(data['log']['entries']):
-        record = {COL_CASE_NAME: f'测试用例_{i + 1}', COL_RUN: 'Y', COL_LEVEL: 'normal', COL_TAGS: '自动生成'}
-        url = furl.furl(interface['request']['url'])
-        url.set(query=None)
-        record[COL_URL] = url.url
-        record[COL_METHOD] = interface['request']['method']
-        record[COL_PRE_VARIABLE] = ''
-        record[COL_HEADERS] = {header['name']: header['value'] for header in interface['request']['headers'] if
-                               header['name'] not in ('Host', 'Connection', 'Content-Length')}
-        record[COL_QUERY] = json.dumps({query['name']: query['value'] for query in interface["request"]["queryString"]},
-                                       indent=4) if interface["request"]["queryString"] else ''
-        body = interface['request']['postData']['text']
-        record[COL_BODY] = json.dumps(json.loads(body), indent=4) if body else body
-        record[COL_EXPECT] = [f'r.status_code == {interface["response"]["status"]}']
-        try:
-            r = json.loads(interface["response"]['content']['text'])
-        except JSONDecodeError:
-            pass
-        else:
-            if isinstance(r, dict):
-                for k, v in r.items():
-                    if isinstance(v, bool):
-                        record[COL_EXPECT].append(f'r.json()["{k}"] is {repr(v)}')
-                    elif isinstance(v, str) or isinstance(v, int) or isinstance(v, float):
-                        # if 'date' in k.lower() or 'time' in k.lower():
-                        #     continue
-                        record[COL_EXPECT].append(f'r.json()["{k}"] == {repr(v)}')
-                    elif isinstance(v, list):
-                        record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], list)')
-                        record[COL_EXPECT].append(f'len(r.json()["{k}"]) == {len(v)}')
-                    elif isinstance(v, dict):
-                        record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], dict)')
-                        record[COL_EXPECT].append(f'len(r.json()["{k}"]) == {len(v)}')
-            elif isinstance(r, list):
-                record[COL_EXPECT].append(f'isinstance(r.json(), list)')
-                record[COL_EXPECT].append(f'len(r.json()) == {len(r)}')
+    for i, call in enumerate(parse_har(filename)):
+        record = {
+            COL_CASE_NAME: f'测试用例_{i + 1}',
+            COL_RUN: 'Y',
+            COL_LEVEL: 'normal',
+            COL_TAGS: '自动生成',
+            COL_URL: call.request.url,
+            COL_METHOD: call.request.method,
+            COL_PRE_VARIABLE: '',
+            COL_HEADERS: call.request.headers,
+            COL_QUERY: json.dumps(call.request.query),
+            COL_BODY: json.dumps(call.request.body) if call.request.body else call.request.body,
+            COL_EXPECT: [f'r.status_code == {call.response.status_code}']
+        }
+        r = call.response.body
+        if isinstance(r, dict):
+            for k, v in r.items():
+                if isinstance(v, bool):
+                    record[COL_EXPECT].append(f'r.json()["{k}"] is {repr(v)}')
+                elif isinstance(v, str) or isinstance(v, int) or isinstance(v, float):
+                    # if 'date' in k.lower() or 'time' in k.lower():
+                    #     continue
+                    record[COL_EXPECT].append(f'r.json()["{k}"] == {repr(v)}')
+                elif isinstance(v, list):
+                    record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], list)')
+                    record[COL_EXPECT].append(f'len(r.json()["{k}"]) == {len(v)}')
+                elif isinstance(v, dict):
+                    record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], dict)')
+                    record[COL_EXPECT].append(f'len(r.json()["{k}"]) == {len(v)}')
+        elif isinstance(r, list):
+            record[COL_EXPECT].append(f'isinstance(r.json(), list)')
+            record[COL_EXPECT].append(f'len(r.json()) == {len(r)}')
+        elif isinstance(r, str):
+            record[COL_EXPECT].append(f'r.text == {repr(r)}')
 
         record[COL_EXPECT] = '\n'.join(record[COL_EXPECT])
         record[COL_POST_VARIABLE] = ''

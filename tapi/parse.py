@@ -1,11 +1,13 @@
 import os
+from json import JSONDecodeError
 from typing import List, Union
 
+import furl
 from pandas import read_excel, ExcelFile
 from numpy import isnan
 import json
 from loguru import logger
-from .models import TSuite, TCase, TStep, TRequest, THook
+from .models import TSuite, TCase, TStep, TRequest, THook, TCall, TResponse
 
 COL_CASE_NAME = '用例名称'
 COL_RUN = 'run'
@@ -202,6 +204,51 @@ def get_value(line: dict, key: str, is_necessary: bool = False):
             return tmp
         else:
             return value
+
+
+def parse_har(filename) -> List[TCall]:
+    with open(filename, "rb") as f:
+        data = json.load(f)
+    calls = []
+    for i, interface in enumerate(data['log']['entries']):
+        url = furl.furl(interface['request']['url'])
+        url.set(query=None)
+        url = url.url
+        method = interface['request']['method']
+        headers = {header['name']: header['value'] for header in interface['request']['headers'] if
+                   header['name'] not in ('Host', 'Connection', 'Content-Length')}
+        query = {query['name']: query['value'] for query in interface["request"]["queryString"]} if \
+            interface["request"]["queryString"] else {}
+        body = interface['request']['postData']['text']
+        try:
+            body = json.loads(body)
+        except JSONDecodeError:
+            pass
+        request = TRequest(
+            url=url,
+            method=method,
+            headers=headers,
+            body=body,
+            query=query
+        )
+        status_code = interface["response"]["status"]
+        body = interface["response"]['content']['text']
+        try:
+            tmp = json.loads(body)
+        except JSONDecodeError:
+            pass
+        else:
+            if isinstance(tmp, list) or isinstance(tmp, dict):
+                body = tmp
+        headers = {header['name']: header['value'] for header in interface['response']['headers'] if
+                   header['name'] not in ('Host', 'Connection', 'Content-Length')}
+        response = TResponse(
+            status_code=status_code,
+            headers=headers,
+            body=body
+        )
+        calls.append(TCall(request=request, response=response))
+    return calls
 
 
 if __name__ == '__main__':
