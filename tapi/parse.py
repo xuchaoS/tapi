@@ -101,7 +101,7 @@ def parse_step(line) -> Union[TStep]:
 
 
 def parse_cases(test_case_file_name, sheet=0) -> List[TCase]:
-    logger.info(f'读取文件：{test_case_file_name}，sheet页：{sheet}')
+    logger.debug(f'解析文件：{test_case_file_name}，sheet页：{sheet}')
     df = read_excel(test_case_file_name, sheet)
     data: list = df.to_dict(orient='records')
     cases: list = []
@@ -151,13 +151,14 @@ def parse_hooks(test_case_file_name, sheet=0) -> List[THook]:
 
 
 def get_all_test_case() -> List[TSuite]:
+    logger.trace('开始发现测试用例')
     abs_test_case_path = os.path.abspath(os.path.join(os.path.curdir, TEST_CASE_PATH))
     test_case_file_names = os.listdir(abs_test_case_path)
     suites = []
     for test_case_file_name in test_case_file_names:
         if test_case_file_name.startswith('test_') and (
                 test_case_file_name.endswith('.xlsx') or test_case_file_name.endswith('.xls')):
-            logger.info(f'发现测试用例文件{test_case_file_name}, 正在解析')
+            logger.debug(f'发现测试用例文件{test_case_file_name}, 开始解析')
             test_case_file = os.path.join(abs_test_case_path, test_case_file_name)
             test_case_file_obj = ExcelFile(test_case_file)
             sheets = test_case_file_obj.sheet_names
@@ -179,6 +180,7 @@ def get_all_test_case() -> List[TSuite]:
                         sub_suite_name = sheet[2:]
                         suites.append(
                             TSuite(name=sub_suite_name, cases=cases, parent_suite_name=suite_name, hooks=hooks))
+    logger.debug('所用测试用例解析完毕')
     return suites
 
 
@@ -200,73 +202,6 @@ def get_value(line: dict, key: str, is_necessary: bool = False):
             return tmp
         else:
             return value
-
-
-# @logger.catch(reraise=True)
-# def get_variables(datafile: str, sheet=0):
-#     logger.info(f'读取文件：{datafile}，sheet页：{sheet}')
-#     df = read_excel(datafile, sheet)
-#     data: list = df.to_dict(orient='records')
-#     result: list = []
-#     run: bool = False
-#     for i, line in enumerate(data):
-#         try:
-#             case_name = get_value(line, COL_CASE_NAME)
-#             if case_name:
-#                 run = True if str(get_value(line, COL_RUN, True)).upper() == 'Y' else False
-#                 if run:
-#                     create_test_case(str(case_name), line, result)
-#             else:
-#                 if run:
-#                     result[-1]['steps'].append(gen_step(line))
-#         except Exception as e:
-#             # logger.error(f'文件{datafile}第{i + 2}行读取错误：\n{e}')
-#             root = Tk()
-#             root.withdraw()
-#             showerror('用例文件解析失败', f'文件{datafile}第{i + 2}行读取错误：\n{format_exc()}')
-#             raise e
-#     # variables = {'data': result}
-#     return result
-#
-#
-# def create_test_case(case_name: str, line: dict, result: list):
-#     tags = [i.strip() for i in get_value(line, COL_TAGS).split('\n')] if get_value(line, COL_TAGS) else []
-#     # if AUTO_ASSERT_KEYWORD not in case_name:
-#     result.append({'case_name': case_name, 'tags': tags, 'steps': [gen_step(line)]})
-#     logger.info(f'读取测试用例：{case_name}')
-#
-#
-# def gen_step(line: dict):
-#     url = get_value(line, COL_URL, True)
-#     method = get_value(line, COL_METHOD, True).upper()
-#     body = get_value(line, COL_DATA, False)
-#     body = json.loads(get_value(line, COL_DATA, False)) if body else body
-#     expect = [i.strip() for i in get_value(line, COL_EXPECT).split('\n')] if get_value(line, COL_EXPECT) else []
-#     if get_value(line, COL_PRE_VARIABLE):
-#         _variables = (i.strip() for i in str(get_value(line, COL_PRE_VARIABLE)).split('\n'))
-#     else:
-#         _variables = []
-#     pre_variables = {}
-#     for v in _variables:
-#         index = v.index('=')
-#         pre_variables[v[: index].strip()] = v[index + 1:].strip()
-#
-#     if get_value(line, COL_POST_VARIABLE):
-#         _variables = (i.strip() for i in str(get_value(line, COL_POST_VARIABLE)).split('\n'))
-#     else:
-#         _variables = []
-#     post_variables = {}
-#     for v in _variables:
-#         index = v.index('=')
-#         post_variables[v[: index].strip()] = v[index + 1:].strip()
-#     return {
-#         'url': url,
-#         'method': method,
-#         'data': body,
-#         'asserts': expect,
-#         'pre variables': pre_variables,
-#         'post variables': post_variables,
-#     }
 
 
 if __name__ == '__main__':
