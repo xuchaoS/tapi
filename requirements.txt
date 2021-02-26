@@ -1,0 +1,13 @@
+requests
+pytest
+allure-pytest
+PyYAML
+Faker
+loguru
+pycryptodome
+Jinja2
+pydantic
+pandas
+openpyxl
+autopep8
+furl
