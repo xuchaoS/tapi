@@ -4,7 +4,6 @@ from json import JSONDecodeError
 
 import requests
 import allure
-from loguru import logger
 from urllib.parse import urljoin
 from typing import Text, Dict, Union, NoReturn, MutableMapping, IO
 from config import BASE_URL, HEADERS
@@ -20,7 +19,7 @@ def request(url, method, headers, query, body) -> requests.Response:
         current_headers.update(headers)
     r = requests.request(method, url, headers=current_headers, params=query, json=body, verify=False)
 
-    recode_headers(r.headers, '响应头')
+    recode_headers(r.headers, f'响应头 {r.status_code}')
     try:
         allure.attach(json.dumps(r.json(), indent=4), '响应数据', allure.attachment_type.JSON)
     except JSONDecodeError:
@@ -43,4 +42,3 @@ def recode_headers(headers: MutableMapping, name: Text, method: Text = '', url: 
     if method and url:
         headers_text = f'{method.upper()} {url}\n{headers_text}'
     allure.attach(headers_text, name, allure.attachment_type.TEXT)
-    # logger.debug(f'{name}: \n{headers_text}')

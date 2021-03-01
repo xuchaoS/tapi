@@ -6,7 +6,6 @@ from typing import List
 
 from pydantic import BaseModel, Field
 import allure
-from pydantic import HttpUrl
 
 
 class MethodEnum(Text, Enum):

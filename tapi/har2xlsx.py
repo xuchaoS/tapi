@@ -1,8 +1,7 @@
 import json
 import os
-from json import JSONDecodeError
+import pprint
 
-import autopep8
 import furl
 
 from pandas import DataFrame
@@ -29,11 +28,11 @@ def har2xlsx(filename):
             COL_LEVEL: 'normal',
             COL_TAGS: '自动生成',
             COL_URL: call.request.url,
-            COL_METHOD: call.request.method,
+            COL_METHOD: call.request.method.value,
             COL_PRE_VARIABLE: '',
             COL_HEADERS: call.request.headers,
-            COL_QUERY: json.dumps(call.request.query),
-            COL_BODY: json.dumps(call.request.body) if call.request.body else call.request.body,
+            COL_QUERY: pprint.pformat(call.request.query) if call.request.query else '',
+            COL_BODY: pprint.pformat(call.request.body) if call.request.body else call.request.body,
             COL_EXPECT: [f'r.status_code == {call.response.status_code}']
         }
         r = call.response.body
@@ -42,8 +41,6 @@ def har2xlsx(filename):
                 if isinstance(v, bool):
                     record[COL_EXPECT].append(f'r.json()["{k}"] is {repr(v)}')
                 elif isinstance(v, str) or isinstance(v, int) or isinstance(v, float):
-                    # if 'date' in k.lower() or 'time' in k.lower():
-                    #     continue
                     record[COL_EXPECT].append(f'r.json()["{k}"] == {repr(v)}')
                 elif isinstance(v, list):
                     record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], list)')
@@ -51,6 +48,8 @@ def har2xlsx(filename):
                 elif isinstance(v, dict):
                     record[COL_EXPECT].append(f'isinstance(r.json()["{k}"], dict)')
                     record[COL_EXPECT].append(f'len(r.json()["{k}"]) == {len(v)}')
+                elif v is None:
+                    record[COL_EXPECT].append(f'r.json()["{k}"] is None')
         elif isinstance(r, list):
             record[COL_EXPECT].append(f'isinstance(r.json(), list)')
             record[COL_EXPECT].append(f'len(r.json()) == {len(r)}')
@@ -68,8 +67,6 @@ def har2xlsx(filename):
         for k, v in global_headers.copy().items():
             if k not in record[COL_HEADERS] or record[COL_HEADERS][k] != v:
                 global_headers.pop(k)
-    # print(base_url)
-    # print(len(global_headers), global_headers)
     with open('config_自动生成.py', 'w') as f:
         f.write(f"BASE_URL = '{base_url}'\n")
         f.write('HEADERS = {\n')
@@ -82,7 +79,7 @@ def har2xlsx(filename):
             record[COL_URL] = record[COL_URL][base_url_len:]
         for k in global_headers:
             record[COL_HEADERS].pop(k)
-        record[COL_HEADERS] = json.dumps(record[COL_HEADERS], indent=4)
+        record[COL_HEADERS] = pprint.pformat(record[COL_HEADERS]) if record[COL_HEADERS] else ''
 
     df = DataFrame(records)
     df.to_excel(f'test_自动生成_{os.path.basename(filename)[:-4]}.xlsx',
@@ -109,7 +106,5 @@ def har2api(filename):
             apis[url] = {'method': method, 'headers': headers, 'data': [{'query': query, 'body': body}]}
         else:
             apis[url]['data'].append({'query': query, 'body': body})
-    # import pprint
-    # pprint.pprint(apis)
     with open('apis.json', 'w') as f:
         json.dump(apis, f, indent=4)

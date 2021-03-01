@@ -10,7 +10,6 @@ from .models import TSuite
 
 TEST_SCRIPT_DIR = os.path.join(os.curdir, f'test_scripts_{time.strftime("%Y%m%d_%H%M%S")}')
 TEMPLATE = jinja2.Template('''import allure
-import json
 
 from tapi.request import request
 
@@ -26,12 +25,13 @@ class TestSuit(object):
     {% endif %}
     {% if hook.hook_type.value == 'setup_class' %}
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
     {% endif %}
     {% if hook.hook_type.value == 'teardown_class' %}
     @classmethod
-    def teardown_class(self):
+    def teardown_class(cls):
     {% endif %}
+        from conftest import _var as var
         {% for step in hook.steps %}
         {% for pre_variable in step.pre_variables %}
         {{ pre_variable }}
@@ -74,7 +74,6 @@ class TestSuit(object):
             r = request(url, method, headers, query, body)
             {% for post_variable in step.post_variables %}{{ post_variable }}
             {% endfor %}
-            allure.attach(json.dumps(var, indent=4), '全局变量：var', allure.attachment_type.JSON)
             {% for validator in step.validators %}assert {{ validator }}
             {% endfor %}
         {% endfor %}

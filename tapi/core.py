@@ -1,5 +1,6 @@
 import os
-import time
+
+import urllib3
 
 from .runner import run_all_test_cases, open_test_report
 from .parse import get_all_test_case
@@ -8,7 +9,8 @@ from loguru import logger
 
 
 def main(open_report=False):
-    logger.add(os.path.join(os.curdir, 'outputs', 'logs', f'log_{time.strftime("%Y%m%d_%H%M%S")}.log'),
+    urllib3.disable_warnings()
+    logger.add(os.path.join(os.curdir, 'outputs', f'run_test.log'),
                level='TRACE',
                encoding='utf-8')
     logger.trace('主程序开始执行')
